@@ -3,12 +3,13 @@
 var lazy = require("lazy.js");
 var React = require("react/addons");
 
+var DeploymentActions = require("../actions/DeploymentActions");
+
 var DeploymentComponent = React.createClass({
   name: "DeploymentComponent",
 
   propTypes: {
-    model: React.PropTypes.object.isRequired,
-    destroyDeployment: React.PropTypes.func.isRequired
+    model: React.PropTypes.object.isRequired
   },
 
   getInitialState: function () {
@@ -21,17 +22,34 @@ var DeploymentComponent = React.createClass({
     this.setState({loading: bool});
   },
 
-  handleDestroyDeployment: function (forceStop) {
-    this.props.destroyDeployment(
-      this.props.model,
-      {forceStop: forceStop},
-      this
-    );
+  handleRevertDeployment: function () {
+    var model = this.props.model;
+
+    var confirmMessage =
+      "Destroy deployment of apps: '" + model.affectedAppsString +
+      "'?\nDestroying this deployment will create and start a new " +
+      "deployment to revert the affected app to its previous version.";
+
+
+    if (confirm(confirmMessage)) {
+      DeploymentActions.revertDeployment(model.id);
+    }
+  },
+
+  handleStopDeployment: function () {
+    var model = this.props.model;
+
+    var confirmMessage =
+      "Stop deployment of apps: '" + model.affectedAppsString +
+      "'?\nThis will stop the deployment immediately and leave it in the " +
+      "current state.";
+
+    if (confirm(confirmMessage)) {
+      DeploymentActions.stopDeployment(model.id);
+    }
   },
 
   getButtons: function () {
-    /* jshint trailing:false, quotmark:false, newcap:false */
-    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     if (this.state.loading) {
       return (
         <div className="progress progress-striped active pull-right"
@@ -48,14 +66,14 @@ var DeploymentComponent = React.createClass({
         <ul className="list-inline">
           <li>
             <button
-                onClick={this.handleDestroyDeployment.bind(this, true)}
+                onClick={this.handleStopDeployment}
                 className="btn btn-xs btn-default">
               Stop
             </button>
           </li>
           <li>
             <button
-                onClick={this.handleDestroyDeployment.bind(this, false)}
+                onClick={this.handleRevertDeployment}
                 className="btn btn-xs btn-default">
               Rollback
             </button>
@@ -63,8 +81,6 @@ var DeploymentComponent = React.createClass({
         </ul>
       );
     }
-    /* jshint trailing:true, quotmark:true, newcap:true */
-    /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
   },
 
   render: function () {
@@ -76,8 +92,6 @@ var DeploymentComponent = React.createClass({
 
     var progressStep = Math.max(0, model.currentStep - 1);
 
-    /* jshint trailing:false, quotmark:false, newcap:false */
-    /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
     return (
       // Set `title` on cells that potentially overflow so hovering on the
       // cells will reveal their full contents.

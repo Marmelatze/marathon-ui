@@ -6,7 +6,6 @@ var Mousetrap = require("mousetrap");
 var React = require("react/addons");
 var States = require("../constants/States");
 var AppCollection = require("../models/AppCollection");
-var DeploymentCollection = require("../models/DeploymentCollection");
 var AppListComponent = require("../components/AppListComponent");
 var AboutModalComponent = require("../components/modals/AboutModalComponent");
 var AppPageComponent = require("../components/AppPageComponent");
@@ -263,43 +262,6 @@ var Marathon = React.createClass({
     }
   },
 
-  destroyDeployment: function (deployment, options, component) {
-    component.setLoading(true);
-
-    var forceStop = options.forceStop;
-    var confirmMessage = !forceStop ?
-      "Destroy deployment of apps: '" + deployment.affectedAppsString() +
-        "'?\nDestroying this deployment will create and start a new " +
-        "deployment to revert the affected app to its previous version." :
-      "Stop deployment of apps: '" + deployment.affectedAppsString() +
-        "'?\nThis will stop the deployment immediately and leave it in the " +
-        "current state.";
-
-    if (confirm(confirmMessage)) {
-      setTimeout(function () {
-        deployment.destroy({
-          error: function (data, response) {
-            // Coming from async forceStop
-            if (response.status === 202) {
-              return;
-            }
-
-            var msg = response.responseJSON &&
-              response.responseJSON.message ||
-              response.statusText;
-            if (msg) {
-              alert("Error destroying app '" + deployment.id + "': " + msg);
-            }
-          },
-          forceStop: forceStop,
-          wait: !forceStop
-        });
-      }, 1000);
-    } else {
-      component.setLoading(false);
-    }
-  },
-
   rollbackToAppVersion: function (version) {
     if (this.state.activeApp != null) {
       var app = this.state.activeApp;
@@ -479,8 +441,7 @@ var Marathon = React.createClass({
         <TabPaneComponent
             id="deployments"
             onActivate={this.props.fetchAppVersions} >
-          <DeploymentsListComponent
-            destroyDeployment={this.destroyDeployment} />
+          <DeploymentsListComponent />
         </TabPaneComponent>
       </TogglableTabsComponent>
     );

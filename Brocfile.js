@@ -3,6 +3,7 @@ var cleanCSS = require("broccoli-clean-css");
 var concatCSS = require("broccoli-concat");
 var env = require("broccoli-env").getEnv();
 var funnel = require("broccoli-funnel");
+var filterReact = require("broccoli-react");
 var eslint = require("broccoli-lint-eslint");
 var less = require("broccoli-less");
 var mergeTrees = require("broccoli-merge-trees");
@@ -19,12 +20,12 @@ var packageConfig = require("./package.json");
 var dirs = {
   src: "",
   js: "js",
-  jsDist: ".", // use . for root
+  jsDist: "dist", // use . for root
   styles: "css",
-  stylesVendor: "vendor",
-  stylesDist: ".", // use . for root
+  stylesVendor: "css/vendor",
+  stylesDist: "dist", // use . for root
   img: "img",
-  imgDist: "img"
+  imgDist: "dist/img"
 };
 
 // without extensions
@@ -83,6 +84,7 @@ var tasks = {
     }
     return webpackify(masterTree, options);
   },
+
   minifyJs: function (masterTree) {
     return uglifyJavaScript(masterTree, {
       mangle: true,
@@ -159,6 +161,8 @@ function createJsTree() {
     include: ["**/*.js"],
     destDir: dirs.jsDist
   });
+
+  jsTree = filterReact(jsTree, {extensions: ["js"]});
 
   // replace @@ENV in js code with current BROCCOLI_ENV environment variable
   // {default: "development" | "production"}

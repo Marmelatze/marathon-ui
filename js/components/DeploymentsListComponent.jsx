@@ -82,10 +82,15 @@ var DeploymentListComponent = React.createClass({
         return deployment[sortKey];
       }, state.sortDescending)
       .map(function (deployment) {
+        /* jshint trailing:false, quotmark:false, newcap:false */
+        /* jscs:disable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
         return (
           <DeploymentComponent key={deployment.id} model={deployment} />
         );
-    }.bind(this)).value();
+        /* jshint trailing:true, quotmark:true, newcap:true */
+        /* jscs:enable disallowTrailingWhitespace, validateQuoteMarks, maximumLineLength */
+      }.bind(this))
+      .value();
   },
 
   getCaret: function (sortKey) {

@@ -3,11 +3,9 @@ var cleanCSS = require("broccoli-clean-css");
 var concatCSS = require("broccoli-concat");
 var env = require("broccoli-env").getEnv();
 var funnel = require("broccoli-funnel");
-var filterReact = require("broccoli-react");
 var eslint = require("broccoli-lint-eslint");
 var less = require("broccoli-less");
 var mergeTrees = require("broccoli-merge-trees");
-var pickFiles = require("broccoli-static-compiler");
 var replace = require("broccoli-replace");
 var uglifyJavaScript = require("broccoli-uglify-js");
 var webpackify = require("broccoli-webpack");
@@ -18,14 +16,16 @@ var packageConfig = require("./package.json");
  * configuration
  */
 var dirs = {
-  src: "",
+  src: ".",
   js: "js",
   jsDist: "dist", // use . for root
   styles: "css",
-  stylesVendor: "css/vendor",
+  stylesVendor: "vendor",
   stylesDist: "dist", // use . for root
   img: "img",
-  imgDist: "dist/img"
+  imgDist: "img",
+  html: "html",
+  htmlDist: "."
 };
 
 // without extensions
@@ -48,9 +48,9 @@ var tasks = {
   webpack: function (masterTree) {
     // transform merge module dependencies into one file
     var options = {
-      entry: "./" + fileNames.mainJs + ".js",
+      entry: "./" + dirs.js + "/" + fileNames.mainJs + ".js",
       output: {
-        filename: dirs.jsDist + "/" + fileNames.mainJsDist + ".js"
+        filename: fileNames.mainJsDist + ".js"
       },
       module: {
         loaders: [
@@ -94,9 +94,8 @@ var tasks = {
 
   css: function (masterTree) {
     // create tree for less
-    var cssTree = pickFiles(dirs.styles, {
-      srcDir: "./",
-      files: ["**/main.less", "**/*.css"],
+    var cssTree = funnel(dirs.styles, {
+      include: ["**/main.less", "**/*.css"],
       destDir: dirs.stylesDist
     });
 
@@ -106,10 +105,10 @@ var tasks = {
     // concatenate css
     cssTree = concatCSS(cssTree, {
       inputFiles: [
-        dirs.stylesVendor + "/*.css",
+        dirs.stylesDist + "/" + dirs.stylesVendor + "/*.css",
         dirs.stylesDist + "/" + fileNames.mainStyles + ".css"
       ],
-      outputFile: "/" + dirs.stylesDist + "/" + fileNames.mainStylesDist + ".css",
+      outputFile: "/" + fileNames.mainStylesDist + ".css",
     });
 
     return mergeTrees(
@@ -122,27 +121,22 @@ var tasks = {
     return cleanCSS(masterTree);
   },
 
-  index: function (masterTree) {
-    // create tree for index
-    //var indexTree = pickFiles("./", {
-    //  srcDir: "./",
-    //  files: ["^index.html$"],
-    //  destDir: dirs.jsDist
-    //});
-    var indexTree = funnel(".", {
+  html: function (masterTree) {
+    // create tree for html
+    var htmlTree = funnel(dirs.html, {
       files: ["index.html"]
     });
+
     return mergeTrees(
-      [masterTree, indexTree],
+      [masterTree, htmlTree],
       { overwrite: true }
     );
   },
 
   img: function (masterTree) {
     // create tree for image files
-    var imgTree = pickFiles(dirs.img, {
-      srcDir: "./",
-      destDir: dirs.imgDist,
+    var imgTree = funnel(dirs.img, {
+      destDir: dirs.imgDist
     });
 
     return mergeTrees(
@@ -159,10 +153,8 @@ function createJsTree() {
   // create tree for .js and .jsx
   var jsTree = funnel(dirs.js, {
     include: ["**/*.js"],
-    destDir: dirs.jsDist
+    destDir: dirs.js
   });
-
-  jsTree = filterReact(jsTree, {extensions: ["js"]});
 
   // replace @@ENV in js code with current BROCCOLI_ENV environment variable
   // {default: "development" | "production"}
@@ -191,9 +183,16 @@ if (env === "development" || env === "production" ) {
   // add steps used in both development and production
   buildTree = _.compose(
     tasks.img,
-    tasks.index,
     tasks.css,
     tasks.webpack,
+    buildTree
+  );
+}
+
+if (env === "development") {
+  // add steps that are exclusively used in development
+  buildTree = _.compose(
+    tasks.html,
     buildTree
   );
 }

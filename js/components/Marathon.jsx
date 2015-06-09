@@ -103,14 +103,14 @@ var Marathon = React.createClass({
       router.navigate("about", {trigger: true});
     }.bind(this));
 
-    this.updatePolling();
+    this.startPolling();
   },
 
   componentDidUpdate: function (prevProps, prevState) {
     /* jshint eqeqeq: false */
     if (prevState.activeApp != this.state.activeApp ||
       prevState.activeTabId != this.state.activeTabId) {
-      this.updatePolling();
+      this.poll();
     }
   },
 
@@ -151,7 +151,6 @@ var Marathon = React.createClass({
         this.setState({fetchState: States.STATE_ERROR});
       }.bind(this),
       success: function () {
-        this.fetchDeployments();
         this.setState({
           fetchState: States.STATE_SUCCESS,
           activeApp: this.state.collection.get(this.state.activeAppId)
@@ -173,10 +172,6 @@ var Marathon = React.createClass({
     }
   },
 
-  fetchDeployments: function () {
-    DeploymentActions.requestDeployments();
-  },
-
   fetchTasks: function () {
     if (this.state.activeApp != null) {
       this.state.activeApp.tasks.fetch({
@@ -184,7 +179,6 @@ var Marathon = React.createClass({
           this.setState({tasksFetchState: States.STATE_ERROR});
         }.bind(this),
         success: function (collection, response) {
-          this.fetchDeployments();
           // update changed attributes in app
           this.state.activeApp.update(response.app);
           this.setState({tasksFetchState: States.STATE_SUCCESS});
@@ -322,18 +316,6 @@ var Marathon = React.createClass({
     }
   },
 
-  poll: function () {
-    this._pollResource();
-  },
-
-  setPollResource: function (func) {
-    // Kill any poll that is in flight to ensure it doesn't fire after having changed
-    // the `_pollResource` function.
-    this.stopPolling();
-    this._pollResource = func;
-    this.startPolling();
-  },
-
   startPolling: function () {
     if (this._interval == null) {
       this.poll();
@@ -348,16 +330,14 @@ var Marathon = React.createClass({
     }
   },
 
-  updatePolling: function () {
-    var id = this.state.activeTabId;
-
+  poll: function () {
     if (this.state.activeApp) {
-      this.setPollResource(this.fetchTasks);
-    } else if (id === tabs[0].id) {
-      this.setPollResource(this.fetchApps);
-    } else if (id === tabs[1].id) {
-      this.setPollResource(this.fetchDeployments);
+      this.fetchTasks();
+    } else if (this.state.activeTabId === tabs[0].id) {
+      this.fetchApps();
     }
+
+    DeploymentActions.requestDeployments();
   },
 
   activateTab: function (id) {

@@ -6,10 +6,12 @@ var Mousetrap = require("mousetrap");
 var React = require("react/addons");
 var States = require("../constants/States");
 var AppCollection = require("../models/AppCollection");
+var GroupCollection = require("../models/GroupCollection");
 var DeploymentCollection = require("../models/DeploymentCollection");
 var AppListComponent = require("../components/AppListComponent");
 var AboutModalComponent = require("../components/modals/AboutModalComponent");
 var AppPageComponent = require("../components/AppPageComponent");
+var GroupsListComponent = require("../components/GroupListComponent");
 var DeploymentsListComponent =
   require("../components/DeploymentsListComponent");
 var NewAppModalComponent = require("../components/NewAppModalComponent");
@@ -19,6 +21,7 @@ var NavTabsComponent = require("../components/NavTabsComponent");
 
 var tabs = [
   {id: "apps", text: "Apps"},
+  {id: "groups", text: "Groups"},
   {id: "deployments", text: "Deployments"}
 ];
 
@@ -37,6 +40,8 @@ var Marathon = React.createClass({
       activeTabId: tabs[0].id,
       appVersionsFetchState: States.STATE_LOADING,
       collection: new AppCollection(),
+      groups: new GroupCollection(),
+      groupsFetchState: States.STATE_LOADING,
       deployments: new DeploymentCollection(),
       deploymentsFetchState: States.STATE_LOADING,
       fetchState: States.STATE_LOADING,
@@ -50,6 +55,7 @@ var Marathon = React.createClass({
 
     router.on("route:about", this.setRouteAbout);
     router.on("route:apps", this.setRouteApps);
+    router.on("route:groups", this.setRouteGroups);
     router.on("route:deployments",
       _.bind(this.activateTab, this, "deployments")
     );
@@ -131,6 +137,10 @@ var Marathon = React.createClass({
     }
   },
 
+  setRouteGroups: function () {
+    this.activateTab("groups");
+  },
+
   setRouteNewApp: function () {
     this.setState({
       modalClass: NewAppModalComponent
@@ -165,13 +175,26 @@ var Marathon = React.createClass({
     }
   },
 
+  fetchGroups: function () {
+    this.state.groups.fetch({
+      error: function () {
+        this.setState({groupsFetchState: States.STATE_ERROR});
+      }.bind(this),
+      success: function () {
+        this.setState({
+          groupsFetchState: States.STATE_SUCCESS
+        });
+      }.bind(this)
+    });
+  },
+
   fetchDeployments: function () {
     this.state.deployments.fetch({
       error: function () {
         this.setState({deploymentsFetchState: States.STATE_ERROR});
       }.bind(this),
       success: function (response) {
-        tabs[1].badge = response.models.length;
+        _.findWhere(tabs, {id: "deployments"}).badge = response.models.length;
         this.setState({deploymentsFetchState: States.STATE_SUCCESS});
       }.bind(this)
     });
@@ -390,9 +413,11 @@ var Marathon = React.createClass({
 
     if (this.state.activeApp) {
       this.setPollResource(this.fetchTasks);
-    } else if (id === tabs[0].id) {
+    } else if (id === "apps") {
       this.setPollResource(this.fetchApps);
-    } else if (id === tabs[1].id) {
+    } else if (id === "groups") {
+      this.setPollResource(this.fetchGroups);
+    } else if (id === "deployments") {
       this.setPollResource(this.fetchDeployments);
     }
   },
@@ -473,6 +498,12 @@ var Marathon = React.createClass({
           <AppListComponent
             collection={this.state.collection}
             fetchState={this.state.fetchState}
+            router={this.props.router} />
+        </TabPaneComponent>
+        <TabPaneComponent id="groups">
+          <GroupsListComponent
+            groups={this.state.groups}
+            fetchState={this.state.groupsFetchState}
             router={this.props.router} />
         </TabPaneComponent>
         <TabPaneComponent

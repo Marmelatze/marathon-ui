@@ -2,6 +2,7 @@ var _ = require("underscore");
 var classNames = require("classnames");
 var React = require("react/addons");
 
+var config = require("../config/config");
 var AppBreadcrumbsComponent = require("../components/AppBreadcrumbsComponent");
 var AppVersionListComponent = require("../components/AppVersionListComponent");
 var TabPaneComponent = require("../components/TabPaneComponent");
@@ -14,6 +15,10 @@ var tabsTemplate = [
   {id: "apps/:appid", text: "Tasks"},
   {id: "apps/:appid/configuration", text: "Configuration"}
 ];
+
+if (config.statsURL !== undefined && config.statsURL.length > 0) {
+  tabsTemplate.push({id: "apps/:appid/stats", text: "Stats"});
+}
 
 var AppPageComponent = React.createClass({
   displayName: "AppPageComponent",
@@ -61,6 +66,10 @@ var AppPageComponent = React.createClass({
     var activeTabId = "apps/" + encodeURIComponent(this.props.model.get("id"));
     var activeTask = this.props.model.tasks.get(view);
     var activeViewIndex = 0;
+
+    if (view === "stats") {
+      activeTabId += "/stats";
+    }
 
     if (view === "configuration") {
       activeTabId += "/configuration";
@@ -138,6 +147,10 @@ var AppPageComponent = React.createClass({
     );
   },
 
+  getStatsUrl: function () {
+    return _.template(config.statsURL)({model: this.props.model});
+  },
+
   getAppDetails: function () {
     var model = this.props.model;
 
@@ -146,6 +159,14 @@ var AppPageComponent = React.createClass({
           activeTabId={this.state.activeTabId}
           onTabClick={this.onTabClick}
           tabs={this.state.tabs} >
+        <TabPaneComponent
+          id={"apps/" + encodeURIComponent(model.get("id")) + "/stats"}
+          >
+          <a className="btn btn-sm btn-default pull-right" href={this.getStatsUrl()} target="_blank">
+            Open on External Page
+          </a>
+          <iframe src={this.getStatsUrl()} />
+        </TabPaneComponent>
         <TabPaneComponent
           id={"apps/" + encodeURIComponent(model.get("id"))}>
           <TaskViewComponent
